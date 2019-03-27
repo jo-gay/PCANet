@@ -3,7 +3,7 @@ from os.path import isdir, join
 import timeit
 import argparse
 
-from sklearn.metrics import accuracy_score
+#from sklearn.metrics import accuracy_score
 
 # avoid the odd behavior of pickle by importing under a different name
 import pcanet_based as net
@@ -51,26 +51,38 @@ def train(train_set):
     t2 = timeit.default_timer()
 
     train_time = t2 - t1
-    print("Finding PCA filters took %r"%(train_time,))
+    print("Finding PCA filters took %.1f seconds"%(train_time,))
 
 
-    #Now we have the filters, display the resulting PSRs for a couple of
-    #random test images
+    #Now we have the filters, apply them to a couple of random test images
+    #and calculate and display the resulting PSRs
     for i in np.random.choice(10000, 5):
         imagePSR = pcanet.create_PSR(test_set[0][i])
 
-        plt.imshow(imagePSR[0])
+        plt.imshow(imagePSR[0], cmap='gray')
         plt.show()
     
     return pcanet
 
 
-def test(pcanet, classifier, test_set):
-    images_test, y_test = test_set
+def test(pcanet, test_set):
+    """
+    A simple test. Take a random image from the test set, rotate by a random 
+    amount, get the PSRs for both and show them. 
+    
+    To add later: Calculate and minimize the difference between the PSRs by
+    L-BFGS optimization
+    """
+    idx = np.random.choice(10000)
+    image_orig = test_set[0][idx]
 
-    X_test = pcanet.transform(images_test)
-    y_pred = classifier.predict(X_test)
-    return y_pred, y_test
+    imagePSR = pcanet.create_PSR(image_orig)
+    plt.imshow(imagePSR[0], cmap='gray')
+    plt.show()
+
+    rot = np.random() - 0.5 #random rotation between -0.5 and +0.5 (radians)
+
+    return
 
 
 train_set, test_set = load_mnist()
@@ -96,7 +108,8 @@ elif args.mode == "test":
 #    classifier = load_model(join(args.pretrained_model, "classifier.pkl"))
 
 #    y_test, y_pred = test(pcanet, classifier, test_set)
+    test(pcanet, test_set)
 
 #    accuracy = accuracy_score(y_test, y_pred)
 #    print("accuracy: {}".format(accuracy))
-    print("Test mode not implemented")
+#    print("Test mode not implemented")

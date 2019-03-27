@@ -149,6 +149,26 @@ class PCANetBased(PCANet):
         
         h1 = c1*sigma11 + c2*sigma12
         return h1.reshape(image.shape)
+
+    def calc_h2(self, l1out):
+        """
+        Calculate the parameter h2 for each pixel by averaging over the L1 outputs provided.
+        The shape of the parameter :code:`l1out` should be (L1, 1, w, h)
+        """
+        sigma21 = np.zeros(l1out.shape[-2:])
+        for i in range(l1out.shape[0]):
+            sigma21 += l1out[i][0]
+        sigma21 = abs(sigma21) / l1out.shape[0]
+        
+        sigma22 = sigma21[sigma21!=0].mean()
+        
+        #TODO: C1 and C2 are tuned for MRI images - what happens if you change these?
+        c1=0.8
+        c2=0.6
+        
+        h2 = c1*sigma21 + c2*sigma22
+#        return h2.reshape(l1out.shape[-2:])
+        return h2
     
     
     def create_PSR(self, image):
@@ -167,7 +187,7 @@ class PCANetBased(PCANet):
         
         h1 = self.calc_h1(images[0][0]) #Calculate h1 for the 1st channel of the 1st (only) image
         #TODO: calculate h2
-        h2=1.0
+        h2 = self.calc_h2(l1out)
 
         PSR = np.exp(-F1/h1)*np.exp(-F2/h2)
         return PSR
