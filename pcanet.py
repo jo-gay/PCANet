@@ -60,17 +60,28 @@ def components_to_filters(components, n_channels, filter_shape):
 def output_shape(ys, xs):
     return len(ys), len(xs)
 
+def add_padding(image, filter_shape):
+    xpad = (filter_shape[0]-1)//2
+    ypad = (filter_shape[1]-1)//2
+    
+    #pad with np default value of 0
+    return np.pad(image, ((xpad,),(ypad,)), 'constant')
 
 class Patches(object):
-    def __init__(self, image, filter_shape, step_shape):
+    def __init__(self, image, filter_shape, step_shape, pad=False):
         assert(image.ndim == 2)
 
         # should be either numpy.ndarray or cupy.ndarray
         self.ndarray = type(image)
-        self.image = image
+        
+        if pad:
+            self.image = add_padding(image, filter_shape)
+        else:
+            self.image = image
+
         self.filter_shape = filter_shape
 
-        self.ys, self.xs = steps(image.shape[0:2], filter_shape, step_shape)
+        self.ys, self.xs = steps(self.image.shape[0:2], filter_shape, step_shape)
 
     @property
     def patches(self):
@@ -317,8 +328,12 @@ class PCANet(object):
                     self.step_shape_l1
                 )
                 X.append(patches)
+                
+            #JCG comment: combine patches for each channel into single patch per pixel
             patches = np.hstack(X)
             # patches.shape = (n_patches, n_patches * vector length)
+            #JCG comment: should read patches.shape = (n_patches, n_channels * vector length)? TODO: CHECK
+
             self.pca_l1.partial_fit(patches)
 
         filters_l1 = components_to_filters(
@@ -416,10 +431,17 @@ class PCANet(object):
 
             # x is a set of feature vectors.
             # The shape of x is (n_images, vector length)
+
+            #JCG comment: histogram length is pow(2, L2), i.e. the range
+            #of integers that can be represented by the binarized outputs of 
+            #L2 filters so we normally have shape (n_images, 256)
             X.append(x)
+
+        #JCG comment: X contains L1 elements of shape (n_images, 256)
 
         # concatenate over L1
         X = xp.hstack(X)
+        #JCG comment: now X contains n_images elements of shape (L1*256)
 
         if gpu_enabled():
             X = to_cpu(X)
