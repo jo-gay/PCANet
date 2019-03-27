@@ -140,7 +140,8 @@ class PCANetBased(PCANet):
         
         #For each pixel/patch get the average diff between the centre pixel and the surrounding ones
         sigma11 = abs(9*X[:,4] - X.sum(axis=1))/8 # TODO: also hard-coded to 8-neighbourhood
-        sigma12 = sigma11.mean() #TODO: exclude zeros from the mean calc
+        
+        sigma12 = sigma11[sigma11!=0].mean()
         
         #TODO: C1 and C2 are tuned for MRI images - what happens if you change these?
         c1=0.8
@@ -164,7 +165,7 @@ class PCANetBased(PCANet):
         F1 = self.fuse_maps(l1out)
         F2 = self.fuse_maps(l2out)
         
-        h1 = self.calc_h1(images[0][0]) #Calculate h1 for the 1st channel of the 1st image
+        h1 = self.calc_h1(images[0][0]) #Calculate h1 for the 1st channel of the 1st (only) image
         #TODO: calculate h2
         h2=1.0
 

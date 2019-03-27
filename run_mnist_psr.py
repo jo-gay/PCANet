@@ -3,7 +3,6 @@ from os.path import isdir, join
 import timeit
 import argparse
 
-from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 
 # avoid the odd behavior of pickle by importing under a different name
@@ -11,10 +10,11 @@ import pcanet_based as net
 from utils import load_model, save_model, load_mnist, set_device
 
 import matplotlib.pyplot as plt
+import numpy as np
 
-parser = argparse.ArgumentParser(description="PCANet example")
+parser = argparse.ArgumentParser(description="PSR example")
 parser.add_argument("--gpu", "-g", type=int, default=-1,
-                    help="GPU ID (negative value indicates CPU)")
+                    help="GPU ID (negative value indicates CPU) NB UNTESTED")
 
 subparsers = parser.add_subparsers(dest="mode",
                                    help='Choice of train/test mode')
@@ -45,7 +45,7 @@ def train(train_set):
 
     pcanet.validate_structure()
 
-#JCG comment: Fit calculates the PCA filters for both layers, stored in the PCANet object
+#Fit calculates the PCA filters for both layers, stored in the PCANet object
     t1 = timeit.default_timer()
     pcanet.fit(images_train)
     t2 = timeit.default_timer()
@@ -54,52 +54,15 @@ def train(train_set):
     print("Finding PCA filters took %r"%(train_time,))
 
 
-#Now we have the filters, apply them to the test/target images and use the 
-#output to create the PSR
+    #Now we have the filters, display the resulting PSRs for a couple of
+    #random test images
+    for i in np.random.choice(10000, 5):
+        imagePSR = pcanet.create_PSR(test_set[0][i])
 
-    t1 = timeit.default_timer()
-    image0PSR = pcanet.create_PSR(test_set[0][0])
-    image1PSR = pcanet.create_PSR(test_set[0][1])
-    t2 = timeit.default_timer()
-
-    transform_time = t2 - t1
-    print("Creating PSRs took %r"%(transform_time,))
-
-#JCG comment: Transform applies the filters to the training data and returns the 
-#output feature maps from layers 1 and 2
-#    l1out, l2out = pcanet.transform(images_train[0])
-
-#JCG comment: fuse_maps turns L1 feature maps into a single fused image
-#    t1 = timeit.default_timer()
-#    F1 = pcanet.fuse_maps(l1out)
-#    F2 = pcanet.fuse_maps(l2out)
-#    t2 = timeit.default_timer()
-#
-#    fuse_time = t2 - t1
-#    print("Creating fused feature maps took %r"%(fuse_time,))
-
-#JCG comment: create_PSR turns L1 and L2 fused feature maps into the final PSR
-#    t1 = timeit.default_timer()
-#    PSR = pcanet.create_PSR(F1, F2)
-#    t2 = timeit.default_timer()
-#
-#    psr_time = t2 - t1
-#    print("Creating fused feature maps took %r"%(psr_time,))
-
-    plt.imshow(image0PSR[0])
-    plt.show()
-    plt.imshow(image1PSR[0])
-    plt.show()
-
-#    print("Training the classifier")
-#
-#    t1 = timeit.default_timer()
-#    classifier = SVC(C=10)
-#    classifier.fit(X_train, y_train)
-#    t2 = timeit.default_timer()
-#    print("Training the SVC took %r"%(t2-t1,))
+        plt.imshow(imagePSR[0])
+        plt.show()
     
-    return pcanet, PSR
+    return pcanet
 
 
 def test(pcanet, classifier, test_set):
@@ -111,8 +74,7 @@ def test(pcanet, classifier, test_set):
 
 
 train_set, test_set = load_mnist()
-train_set = (train_set[0][:1000],train_set[1][:1000])
-test_set = (test_set[0][:200],test_set[1][:200])
+train_set = (train_set[0][:10000],train_set[1][:10000])
 
 if args.gpu >= 0:
     set_device(args.gpu)
@@ -120,7 +82,7 @@ if args.gpu >= 0:
 
 if args.mode == "train":
     print("Training the model...")
-    pcanet, PSR = train(train_set)
+    pcanet = train(train_set)
 
     if not isdir(args.out):
         os.makedirs(args.out)
@@ -131,9 +93,10 @@ if args.mode == "train":
 
 elif args.mode == "test":
     pcanet = load_model(join(args.pretrained_model, "pcanet.pkl"))
-    classifier = load_model(join(args.pretrained_model, "classifier.pkl"))
+#    classifier = load_model(join(args.pretrained_model, "classifier.pkl"))
 
-    y_test, y_pred = test(pcanet, classifier, test_set)
+#    y_test, y_pred = test(pcanet, classifier, test_set)
 
-    accuracy = accuracy_score(y_test, y_pred)
-    print("accuracy: {}".format(accuracy))
+#    accuracy = accuracy_score(y_test, y_pred)
+#    print("accuracy: {}".format(accuracy))
+    print("Test mode not implemented")
