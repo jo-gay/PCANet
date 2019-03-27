@@ -1,3 +1,18 @@
+An implementation of PCANet-based Structural Representations (PSR) as described in 
+
+PCANet-Based Structural Representation for Nonrigid Multimodal Medical Image Registration
+X Zhu, M Ding, T Huang, X Jin, X Zhang - Sensors, 2018
+https://www.mdpi.com/1424-8220/18/5/1477/pdf
+
+
+THIS IS WORK IN PROGRESS - but please contact me if you spot problems not already flagged in the code.
+
+It is based on (forked from) an implementation of PCANet by IshitaTakeshi, as described below.
+
+
+
+
+
 PCANet
 ------
 
