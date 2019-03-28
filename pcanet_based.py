@@ -186,7 +186,6 @@ class PCANetBased(PCANet):
         F2 = self.fuse_maps(l2out)
         
         h1 = self.calc_h1(images[0][0]) #Calculate h1 for the 1st channel of the 1st (only) image
-        #TODO: calculate h2
         h2 = self.calc_h2(l1out)
 
         PSR = np.exp(-F1/h1)*np.exp(-F2/h2)

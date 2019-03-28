@@ -11,6 +11,8 @@ from utils import load_model, save_model, load_mnist, set_device
 
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
+import imageio
 
 parser = argparse.ArgumentParser(description="PSR example")
 parser.add_argument("--gpu", "-g", type=int, default=-1,
@@ -76,11 +78,36 @@ def test(pcanet, test_set):
     idx = np.random.choice(10000)
     image_orig = test_set[0][idx]
 
-    imagePSR = pcanet.create_PSR(image_orig)
-    plt.imshow(imagePSR[0], cmap='gray')
+    plt.imshow(np.asarray(image_orig[...,0]), cmap='gray')
+    plt.title("Original image of digit %d"%(test_set[1][idx],))
     plt.show()
 
-    rot = np.random() - 0.5 #random rotation between -0.5 and +0.5 (radians)
+
+    imagePSR = pcanet.create_PSR(image_orig)
+    plt.imshow(imagePSR[0], cmap='gray')
+    plt.title("PSR of original image")
+    plt.show()
+
+    rot = np.random.random()/5. - 0.1 #random rotation between -10 and +10 percent
+   
+    image_rot = image_orig[...,0]*255.0
+    image_rot = Image.fromarray(image_rot.astype('uint8'), mode='L')
+    image_rot = image_rot.rotate(rot*360)
+    image_rot = np.asarray(image_rot)/255.0
+    
+    plt.imshow(image_rot, cmap='gray')
+    plt.title("Rotated by %2.1f percent"%(rot*100,))
+    plt.show()
+
+    rotPSR = pcanet.create_PSR(image_rot)
+    plt.imshow(rotPSR[0], cmap='gray')
+    plt.title("PSR of rotated image")
+    plt.show()
+    
+    outputImagePSR = (imagePSR[0]*255.0).astype('uint8')
+    outputRotPSR = (rotPSR[0]*255.0).astype('uint8')
+    imageio.imwrite('psr_orig_%d.png' % (idx,), outputImagePSR)
+    imageio.imwrite('psr_rot%2.1f_%d.png' % (rot*100,idx,), outputRotPSR)
 
     return
 
