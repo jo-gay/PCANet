@@ -36,6 +36,9 @@ class PCANetBased(PCANet):
         super().__init__(**kwargs)
         self.alpha = 0.005
         self.S0 = expit(0) #S0 = 0.5
+        #TODO: C1 and C2 are tuned for MRI images - what happens if you change these?
+        self.c1 = 0.8
+        self.c2 = 0.6
         
     
     def transform(self, images):
@@ -132,22 +135,21 @@ class PCANetBased(PCANet):
         """
         Calculate the parameter h1 for each pixel in the image provided
         """
-        X = Patches(image, (3,3), (1,1), pad=True).patches #TODO: don't hard-code filter size and step size
+        #Extract the 8-neighbourhood around each pixel
+        X = Patches(image, (3,3), (1,1), pad=True).patches
 
-        # X.shape == (n_patches, filter_height, filter_width)
+        # X.shape == (n_pixels, 3, 3)
         X = X.reshape(X.shape[0], -1)  # flatten each patch
-        #Now X.shape == (n_patches, filter_height*filter_width)
+        #Now X.shape == (n_pixels, 9)
         
         #For each pixel/patch get the average diff between the centre pixel and the surrounding ones
-        sigma11 = abs(9*X[:,4] - X.sum(axis=1))/8 # TODO: also hard-coded to 8-neighbourhood
+        #TODO: although this matches the paper, consider using the average absolute difference instead
+        #of the absolute value of the average difference
+        sigma11 = abs(9*X[:,4] - X.sum(axis=1))/8
         
         sigma12 = sigma11[sigma11!=0].mean()
         
-        #TODO: C1 and C2 are tuned for MRI images - what happens if you change these?
-        c1=0.8
-        c2=0.6
-        
-        h1 = c1*sigma11 + c2*sigma12
+        h1 = self.c1*sigma11 + self.c2*sigma12
         return h1.reshape(image.shape)
 
     def calc_h2(self, l1out):
@@ -162,12 +164,7 @@ class PCANetBased(PCANet):
         
         sigma22 = sigma21[sigma21!=0].mean()
         
-        #TODO: C1 and C2 are tuned for MRI images - what happens if you change these?
-        c1=0.8
-        c2=0.6
-        
-        h2 = c1*sigma21 + c2*sigma22
-#        return h2.reshape(l1out.shape[-2:])
+        h2 = self.c1*sigma21 + self.c2*sigma22
         return h2
     
     

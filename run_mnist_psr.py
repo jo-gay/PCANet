@@ -67,7 +67,7 @@ def train(train_set):
     return pcanet
 
 
-def test(pcanet, test_set):
+def test(pcanet, pcanet_m2, test_set):
     """
     A simple test. Take a random image from the test set, rotate by a random 
     amount, get the PSRs for both and show them. 
@@ -78,29 +78,30 @@ def test(pcanet, test_set):
     idx = np.random.choice(10000)
     image_orig = test_set[0][idx]
 
-    plt.imshow(np.asarray(image_orig[...,0]), cmap='gray')
+    plt.imshow(np.asarray(image_orig[...,0]), cmap='gray', vmin=0, vmax=1)
     plt.title("Original image of digit %d"%(test_set[1][idx],))
     plt.show()
 
-
     imagePSR = pcanet.create_PSR(image_orig)
-    plt.imshow(imagePSR[0], cmap='gray')
+    plt.imshow(imagePSR[0], cmap='gray', vmin=0, vmax=1)
     plt.title("PSR of original image")
     plt.show()
 
+
+    adjimage = modality_change(image_orig[...,0])
     rot = np.random.random()/5. - 0.1 #random rotation between -10 and +10 percent
    
-    image_rot = image_orig[...,0]*255.0
-    image_rot = Image.fromarray(image_rot.astype('uint8'), mode='L')
-    image_rot = image_rot.rotate(rot*360)
-    image_rot = np.asarray(image_rot)/255.0
+    adjimage_rot = adjimage*255.0
+    adjimage_rot = Image.fromarray(adjimage_rot.astype('uint8'), mode='L')
+    adjimage_rot = adjimage_rot.rotate(rot*360)
+    adjimage_rot = np.asarray(adjimage_rot)/255.0
     
-    plt.imshow(image_rot, cmap='gray')
-    plt.title("Rotated by %2.1f percent"%(rot*100,))
+    plt.imshow(adjimage_rot, cmap='gray', vmin=0, vmax=1)
+    plt.title("Intensity changed and rotated by %2.1f percent"%(rot*100,))
     plt.show()
 
-    rotPSR = pcanet.create_PSR(image_rot)
-    plt.imshow(rotPSR[0], cmap='gray')
+    rotPSR = pcanet_m2.create_PSR(adjimage_rot)
+    plt.imshow(rotPSR[0], cmap='gray', vmin=0, vmax=1)
     plt.title("PSR of rotated image")
     plt.show()
     
@@ -111,9 +112,28 @@ def test(pcanet, test_set):
 
     return
 
+def modality_change(image):
+    """
+    Synthetically change the modality of an image in a non-linear way, just as
+    an initial test of the method
+    """
+    maxInt = np.max(image)
+    minInt = np.min(image)
+    
+    #rebase to zero
+    newimage = image - minInt
+    #Shift intensity by 10%
+    newimage = newimage - (maxInt-minInt)/10
+    #Square it for non-linearity (and low 10% of values flipped)    
+    newimage = pow(newimage, 2)
+    #Rescale so values lie no higher than original max level
+    newimage = newimage / (maxInt - minInt)
+    
+    return newimage
+    
 
 train_set, test_set = load_mnist()
-train_set = (train_set[0][:10000],train_set[1][:10000])
+train_set = (train_set[0][:1000],train_set[1][:1000])
 
 if args.gpu >= 0:
     set_device(args.gpu)
@@ -128,14 +148,22 @@ if args.mode == "train":
 
     save_model(pcanet, join(args.out, "pcanet.pkl"))
     #save_model(PSR, join(args.out, "PSR.pkl"))
-    print("Model saved")
+#    print("Model saved")
+    print("Training the model with synthetic modality...")
+    pcanet = train([modality_change(train_set[0]),train_set[1]])
+
+    if not isdir(args.out):
+        os.makedirs(args.out)
+
+    save_model(pcanet, join(args.out, "pcanet_m2.pkl"))
 
 elif args.mode == "test":
     pcanet = load_model(join(args.pretrained_model, "pcanet.pkl"))
+    pcanet_m2 = load_model(join(args.pretrained_model, "pcanet_m2.pkl"))
 #    classifier = load_model(join(args.pretrained_model, "classifier.pkl"))
 
 #    y_test, y_pred = test(pcanet, classifier, test_set)
-    test(pcanet, test_set)
+    test(pcanet, pcanet_m2, test_set)
 
 #    accuracy = accuracy_score(y_test, y_pred)
 #    print("accuracy: {}".format(accuracy))
