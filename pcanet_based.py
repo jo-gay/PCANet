@@ -3,20 +3,21 @@
 """
 Created on Tue Mar 26 19:38:07 2019
 
-Implementation of Zhu et al PCA-Net based thingy
+Implementation of Zhu et al PCA-Net based structural representation for nonrigid
+multimodal medical image registration. Sensors, 18(5):1477
 
 @author: jo
 """
 
-from pcanet import *
+import pcanet
+import numpy as np
 
-import itertools
+#import itertools
 
 from chainer.cuda import to_gpu, to_cpu
 from chainer.functions import convolution_2d
 
-import numpy as np
-from sklearn.decomposition import IncrementalPCA
+#from sklearn.decomposition import IncrementalPCA
 from scipy.special import expit #fast sigmoid function
 
 from utils import gpu_enabled
@@ -31,14 +32,14 @@ else:
     import numpy as xp
 
 
-class PCANetBased(PCANet):
+class PCANetBasedSR(pcanet.PCANet):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.alpha = 0.005
         self.S0 = expit(0) #S0 = 0.5
         #TODO: C1 and C2 are tuned for MRI images - what happens if you change these?
-        self.c1 = 0.8
-        self.c2 = 0.6
+        self.c1 = 0.08 #orig 0.8
+        self.c2 = 0.06 #orig 0.6
         
     
     def transform(self, images):
@@ -65,14 +66,14 @@ class PCANetBased(PCANet):
         #Now images.shape == (1, n_channels=1, y, x)
 
         #Retrieve the layer 1 filters
-        filters_l1 = components_to_filters(
+        filters_l1 = pcanet.components_to_filters(
             self.pca_l1.components_,
             n_channels=images.shape[1],
             filter_shape=self.filter_shape_l1,
         )
 
         #Retrieve the layer 2 filters
-        filters_l2 = components_to_filters(
+        filters_l2 = pcanet.components_to_filters(
             self.pca_l2.components_,
             n_channels=1,
             filter_shape=self.filter_shape_l2
@@ -136,7 +137,7 @@ class PCANetBased(PCANet):
         Calculate the parameter h1 for each pixel in the image provided
         """
         #Extract the 8-neighbourhood around each pixel
-        X = Patches(image, (3,3), (1,1), pad=True).patches
+        X = pcanet.Patches(image, (3,3), (1,1), pad=True).patches
 
         # X.shape == (n_pixels, 3, 3)
         X = X.reshape(X.shape[0], -1)  # flatten each patch
